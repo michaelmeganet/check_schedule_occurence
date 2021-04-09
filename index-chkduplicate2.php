@@ -301,7 +301,7 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                         if ($sch_detailrow['nextsch_exist'] == 'exist') {
                                             echo "
                                                     <td>
-                                                        <a target='_blank' href = 'repairduplicatescheduling2.php?period=$period&qno={$sch_detailrow['qno']}&com={$sch_detailrow['com']}&cid={$sch_detailrow['cid']}&bid={$sch_detailrow['bid']}&runno={$sch_detailrow['rno']}&nopos={$sch_detailrow['npos']}'
+                                                        <a target='_blank' href = 'repairduplicatescheduling2.php?period=$period&sid={$sch_detailrow['sid']}&qno={$sch_detailrow['qno']}&com={$sch_detailrow['com']}&cid={$sch_detailrow['cid']}&bid={$sch_detailrow['bid']}&runno={$sch_detailrow['rno']}&nopos={$sch_detailrow['npos']}'
                                                             class='btn btn-warning btn-sm'>Repair Scheduling</a>
                                                     </td>";
                                         } else {
