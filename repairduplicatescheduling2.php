@@ -49,7 +49,7 @@ if (isset($_GET['nopos'])) {
         <div class="container">
             <div class="border border-info">
                 <?php
-                echo "<b> STEP 1 - Make sure the scheduling is correct</b>";
+                echo "<b> STEP 1 - Make sure the scheduling is correct</b><br>";
                 echo "SID = $sid<br>";
                 echo "Period = $period<br>";
                 echo "Runningno = $runno<br>";
@@ -179,15 +179,144 @@ if (isset($_GET['nopos'])) {
                     } elseif ($targetPeriod == $nextPeriod) {
                         $sourcePeriod = $period;
                     }
-                    echo "TARGET PERIOD = $targetPeriod<br>";
-                    echo "SOURCE PERIOD = $sourcePeriod<br>";
+                    echo "CORRECT PERIOD = $targetPeriod<br>";
+                    echo "DUPLICATE PERIOD = $sourcePeriod<br>";
                     echo "<div class='border border-success'>";
                     $targetSchTab = "production_scheduling_$targetPeriod";
                     $sourceSchTab = "production_scheduling_$sourcePeriod";
                     $targetOutTab = "production_output_$targetPeriod";
                     $sourceOutTab = "production_output_$sourcePeriod";
-
+                    echo "<div class='border border-warning'>";
+                    echo "Check output data from $targetSchTab <br>";
+                    $targetSchDetail = check_schRecordByPeriod($targetPeriod, $qno, $cid, $bid, $runno, $nopos);
+                    if ($targetSchDetail != 'empty') {
+                        $targetSchDataRow = $targetSchDetail['data'];
+                        $target_sid = $targetSchDataRow['sid'];
+                        $correct_sid = $target_sid;
+                    }
+                    $sourceSchDetail = check_schRecordByPeriod($sourcePeriod, $qno, $cid, $bid, $runno, $nopos);
+                    if ($sourceSchDetail != 'empty') {
+                        $sourceSchDataRow = $sourceSchDetail['data'];
+                        $source_sid = $sourceSchDataRow['sid'];
+                    }
+                    if ($targetSchDetail == 'empty') {
+                        echo "Cannot find data from $targetSchTab<br>";
+                        echo "Process cannot be continued!<br>";
+                        $step4 = FALSE;
+                    } else {
+                        echo "<div class='border border-danger'>";
+                        $target_outDetail = check_outputRecordbySID($targetPeriod, $target_sid);
+                        if ($target_outDetail == 'empty') {
+                            echo "<div class='border border-light'>";
+                            echo "Output is empty, begin check if stray input to $sourceOutTab or not<br>";
+                            $stray_outputdataset = getStrayOutputRecord($sourcePeriod, $target_sid, $qno, $runno, $nopos, $cid);
+                            if ($stray_outputdataset != 'empty') {
+                                echo "Found stray input, fix this and move it into $targetOutTab.<br>";
+                                MoveStrayOutputRecord($stray_outputdataset, $sourcePeriod, $targetPeriod);
+                            } else {
+                                echo "Cannot find any stray input.<br>";
+                                echo "<div class='border border-info'>";
+                                echo "Begin check from $sourceSchTab to see if there's output record or not<br>";
+                                if ($sourceSchDetail != 'empty') {
+                                    echo "Found data in $sourceSchTab<br>";
+                                    echo "Source SID = $source_sid<br>";
+                                    $source_outDetail = check_outputRecordbySID($sourcePeriod, $source_sid);
+                                    if ($source_outDetail == 'empty') {
+                                        echo "There's no record in $sourceOutTab.<br>";
+                                        echo "There's no record in $sourceOutTab and $targetOutTab<br>";
+                                        echo "Joblist might not yet be scanned. No need for Output<br>";
+                                        echo "Moving on.<br>";
+                                    } else {
+                                        echo "Found record in $sourceOutTab<br>";
+                                        echo "Converting SID from $source_sid to $target_sid to point to $targetSchTab<br>";
+                                        $source_outdataset = $source_outDetail['data'];
+                                        foreach ($source_outdataset as $source_outkey => $source_outdatarow) {
+                                            $source_outdataset[$source_outkey]['sid'] = $target_sid;
+                                        }
+                                        echo "Table Converted :";
+                                        printtable($source_outdataset . "yes");
+                                        echo "Move output record int $targetOutTab<br>";
+                                    }
+                                }
+                                echo"</div>"; //check output duplicate transfer
+                            }
+                            echo "</div>"; //check stray output records
+                        } else {
+                            echo "Output exists.<br>";
+                        }
+                        echo "</div>"; //end check output
+                        echo "==Finished checking output data==<br>";
+                        echo "==Begin deleting duplicate records == <br>";
+                        echo "DUPLICATE PERIOD  = $sourcePeriod<br>";
+                        echo "<div class='bg-danger'>";
+                        echo "<div class='border border-light>";
+                        echo "Deleting duplicate output records...<br>";
+                        $qrDelDupOut = "DELETE FROM $sourceOutTab WHERE sid = $source_sid";
+                        $objSQLDelDupOut = new SQL($qrDelDupOut);
+                        $ResultDelDupOut = $objSQLDelDupOut->getDelete();
+                        display_codeblock($qrDelDupOut);
+                        echo "Delete Output Result : $ResultDelDupOut<br>";
+                        echo "</div>";
+                        echo "<div class='border border-light>";
+                        echo "Deleting duplicate Scheduling records...<br>";
+                        $qrDelDupSch = "DELETE FROM $sourceSchTab WHERE sid = $source_sid AND quono = '$qno' AND runningno = $runno AND cid = $cid AND noposition = $nopos AND bid = $bid";
+                        $objSQLDelDupSch = new SQL($qrDelDupSch);
+                        $ResultDelDupSch = $objSQLDelDupSch->getDelete();
+                        display_codeblock($qrDelDupSch);
+                        echo "Delete Scheduling Result : $ResultDelDupSch<br>";
+                        echo "</div>";
+                        echo "</div>";
+                        $step4 = TRUE;
+                    }
+                    echo "</div>"; //
                     echo "</div><br>";
+                }
+                ?>
+                <?php
+                if ($step4) {
+                    echo "<b>STEP 4 - Final JOBCODESID Check</b><br>";
+                    echo "JOBCODE = $sch_jobcode<br>";
+                    echo "<div class='bg-info'>";
+                    if ($chkJCSID == 'empty') {
+                        echo "There was no record in Jobcodesid for, no need to do check<br>";
+                    } else {
+                        printtable($chkJCSID);
+                        $finjcsid_sid = $chkJCSID['sid'];
+                        $finjcsid_period = $chkJCSID['period'];
+                        if ($correct_sid == $finjcsid_sid) {
+                            echo "SID Recorded is correct!<br>";
+                        } else {
+                            echo "SID Recorded is wrong!, Begin update it.<br>";
+                            $qrUpdJC1 = "UPDATE jobcodesid SET sid = $correct_sid WHERE jobcode = '$sch_jobcode'";
+                            $objSQLUpdJC1 = new SQL($qrUpdJC1);
+                            $resultUpdJC1 = $objSQLUpdJC1->getUpdate();
+                            echo "<b>SID Update result = $resultUpdJC1</b>";
+                        }
+                        if ($correctPeriod == $finjcsid_period) {
+                            echo "Period Recorded is correct!<br>";
+                        } else {
+                            echo "Period Recorded is wrong!, Begin update it.<br>";
+                            $qrUpdJC2 = "UPDATE jobcodesid SET period = '$correctPeriod' WHERE jobcode = '$sch_jobcode'";
+                            $objSQLUpdJC2 = new SQL($qrUpdJC2);
+                            $resultUpdJC2 = $objSQLUpdJC2->getUpdate();
+                            echo "<b>Period Update result = $resultUpdJC2</b>";
+                        }
+                    }
+                    echo "</div><br>";
+                    $step5 = TRUE;
+                }
+                ?>
+                <?php
+                if ($step5) {
+                    echo "<b>STEP 5 - Check if still duplicate or not</b><br>";
+                    echo "Correct Period = $targetPeriod<br>";
+                    echo "Duplicate Period = $sourcePeriod<br>";
+                    $finalDupChkSch = check_schRecordByPeriod($sourcePeriod, $qno, $cid, $bid, $runno, $nopos);
+                    if ($finalDupChkSch == 'empty') {
+                        echo "<p class='bg-success'><h4>NO DUPLICATE IS FOUND.</h4</p>";
+                    } else {
+                        echo "<p class='bg-danger'><h4>DUPLICATE IS STILL FOUND.</h4</p>";
+                    }
                 }
                 ?>
             </div>
@@ -277,82 +406,7 @@ function checkJCSID($jobcode) {
     }
 }
 
-function moveSchOutRecord($schdataset, $sourceperiod, $targetperiod) {
-    $sourceschtab = "production_scheduling_$sourceperiod";
-    $targetschtab = "production_scheduling_$targetperiod";
-    $sourcepottab = "production_output_$sourceperiod";
-    $targetpottab = "production_output_$targetperiod";
-
-    echo "===Begin moving record from $sourceperiod into $targetperiod<br>";
-    echo "Iterate dataset: <br>";
-    foreach ($schdataset as $schdatarow) {
-        echo "<div class='bg-secondary'>";
-        $source_sch_sid = $schdatarow['sid'];
-        $source_sch_qno = $schdatarow['qno'];
-        $source_sch_cid = $schdatarow['cid'];
-        $source_sch_rno = $schdatarow['runningno'];
-        $source_sch_npos = $schdatarow['noposition'];
-        echo "OLD SID = $source_sch_sid<br>";
-        unset($schdatarow['sid']);
-        $qrInsSch = "INSERT INTO $targetschtab SET ";
-        $cntInsSch = 0;
-        $cntSchRow = count($schdatarow);
-        foreach ($schdatarow as $schkey => $schval) {
-            $cntInsSch++;
-            $qrInsSch .= " $schkey =:$schkey ";
-            if ($cntInsSch != $cntSchRow) {
-                $qrInsSch .= ' , ';
-            }
-        }
-        $objSQLInsSch = new SQLBINDPARAM($qrInsSch, $schdatarow);
-        $insSchResult = $objSQLInsSch->InsertData2();
-        if ($insSchResult != 'insert ok!') {
-            echo "<p class='bg-danger'>Warning, Failed to insert record</p>";
-        } else {
-            echo "<p class='bg-success'>Successfully insert record</p>";
-            echo "Fetch the newly inserted record in $targetschtab<br>";
-            $qrFetchNewSch = "SELECT * FROM $targetschtab "
-                    . "WHERE quono = '$source_sch_qno' AND runningno = $source_sch_rno AND noposition = $source_sch_npos AND cid = $source_sch_cid "
-                    . "ORDER BY sid DESC";
-            $objSQLFetchNewSch = new SQL($qrFetchNewSch);
-            display_codeblock($qrFetchNewSch);
-            $NewSchDataset = $objSQLFetchNewSch->getResultOneRowArray();
-            printtable($NewSchDataset, "yes");
-            $target_sch_sid = $NewSchDataset['sid'];
-            echo "NEW SID = $target_sch_sid<br>";
-            echo "<div class='bg-info'>";
-            echo "===Check Output Record<br>";
-            $out_dataset = getOutputRecord($sourceperiod, $source_sch_sid, $source_sch_qno, $source_sch_rno, $source_sch_npos, $source_sch_cid);
-            if ($out_dataset != 'empty') {
-                echo "There's no output record, maybe not yet scanned.<br>";
-            } else {
-                echo "Found Output in $sourcepottab<br>";
-                echo "Move the output into $targetpottab<br>";
-                echo "Change the output SID to point into new SID $target_sch_sid<br>";
-                foreach ($out_dataset as $key => $out_datarow) {
-                    $out_dataset[$key]['sid'] = $target_sch_sid;
-                }
-                $moveOutResult = MoveOutputRecord($out_dataset, $sourceperiod, $targetperiod);
-            }
-            echo "===End Check Output Record<br>";
-            echo "</div>";
-            echo "==++Delete Source Scheduling record from $sourceschtab<br>";
-            $qrDelSch = "DELETE FROM $sourceschtab WHERE sid = $source_sch_sid";
-            $objSQLDelSch = new SQL($qrDelSch);
-            $delSchResult = $objSQLDelSch->getDelete();
-            if ($delSchResult == 'deleted') {
-                echo "<p class='bg-success'>Successfully Deleted record</p>";
-            } else {
-                echo "<p class='bg-danger'>Warning, Failed to Delete record</p>";
-            }
-        }
-        echo "</div>";
-    }
-
-    echo "===End moving record from $sourceperiod into $targetperiod<br>";
-}
-
-function MoveOutputRecord($outputdataset, $sourceperiod, $targetperiod) {
+function MoveStrayOutputRecord($outputdataset, $sourceperiod, $targetperiod) {
     echo "===Moving Output Record from $sourceperiod to $targetperiod<br>";
     $targetpottab = "production_output_$targetperiod";
     $sourcepottab = "production_output_$sourceperiod";
@@ -390,7 +444,7 @@ function MoveOutputRecord($outputdataset, $sourceperiod, $targetperiod) {
     }
 }
 
-function getOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
+function getStrayOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
     $pottab = "production_output_$period";
     echo "Try checking for output data in $pottab<br>";
     $qrpot = "SELECT * FROM $pottab WHERE sid = $sid";
@@ -437,7 +491,7 @@ function getOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
 function check_outputRecordbySID($period, $sid) {
     $pottab = "production_output_$period";
     echo "===Checking $pottab for SID = $sid===<br>";
-    $qrpotcount = "SELECT COUNT(*) FROM $pottab WHERE sid = $sid";
+    $qrpotcount = "SELECT COUNT(*) FROM $pottab WHERE sid = $sid AND jobtype != 'jobtake'";
     $objSQLpotcount = new SQL($qrpotcount);
     $potnumrow = $objSQLpotcount->getRowCount();
     display_codeblock($qrpotcount);
@@ -448,7 +502,7 @@ function check_outputRecordbySID($period, $sid) {
         return 'empty';
     } else {
         echo "Found Record! <br>";
-        $qrpot = "SELECT * FROM $pottab WHERE sid = $sid";
+        $qrpot = "SELECT * FROM $pottab WHERE sid = $sid AND jobtype != 'jobtake'";
         $objSQLpot = new SQL($qrpot);
         $potdatarow = $objSQLpot->getResultRowArray();
         printtable($potdatarow, 'yes');

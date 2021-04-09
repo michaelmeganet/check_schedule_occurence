@@ -100,6 +100,7 @@ if (isset($_POST['period'])) {
                 'cid' => $sch_cid,
                 'bid' => $sch_bid,
                 'jcsid_exist' => $jcsid_exist,
+                'jcsid_period' => $jcsid_period,
                 'jcsid_remark' => $jcsid_remark,
                 'nextPeriod' => $nextschPeriod,
                 'nextsch_exist' => $nextsch_exist,
@@ -258,6 +259,10 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                             <td class="bg-danger">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
                                             <td>Cancelled Joblist</td>
                                         </tr>
+                                        <tr>
+                                            <td class="bg-warning">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                            <td>Jobcodesid Period Not Match</td>
+                                        </tr>
                                     </thead>
                                 </table>
                                 <table class='table table-striped table-bordered table-responsive'>
@@ -284,6 +289,8 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                                 echo "<tr class='bg-danger'>";
                                             } elseif ($sch_detailrow['nextsch_exist'] == 'exist') {
                                                 echo "<tr class='bg-info'>";
+                                            } elseif ($sch_detailrow['jcsid_period'] != $period) {
+                                                echo "<tr class='bg-warning'>";
                                             } else {
                                                 echo "<tr>";
                                             }
@@ -298,7 +305,7 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                         <td><?php echo $sch_detailrow['nextsch_remark']; ?></td>
                                         <td><?php echo $sch_detailrow['status']; ?></td>
                                         <?php
-                                        if ($sch_detailrow['nextsch_exist'] == 'exist') {
+                                        if ($sch_detailrow['nextsch_exist'] == 'exist' && $sch_detailrow['status'] != 'cancelled') {
                                             echo "
                                                     <td>
                                                         <a target='_blank' href = 'repairduplicatescheduling2.php?period=$period&sid={$sch_detailrow['sid']}&qno={$sch_detailrow['qno']}&com={$sch_detailrow['com']}&cid={$sch_detailrow['cid']}&bid={$sch_detailrow['bid']}&runno={$sch_detailrow['rno']}&nopos={$sch_detailrow['npos']}'
