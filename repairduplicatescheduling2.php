@@ -259,7 +259,11 @@ if (isset($_GET['nopos'])) {
                         echo "</div>";
                         echo "<div class='border border-light>";
                         echo "Deleting duplicate Scheduling records...<br>";
-                        $qrDelDupSch = "DELETE FROM $sourceSchTab WHERE sid = $source_sid AND quono = '$qno' AND runningno = $runno AND cid = $cid AND noposition = $nopos AND bid = $bid";
+                        $qrDelDupSch = "DELETE FROM $sourceSchTab "
+                                . "WHERE sid = $source_sid AND quono = '$qno' "
+                                . "AND runningno = $runno AND cid = $cid "
+                                . "AND noposition = $nopos AND bid = $bid "
+                                . "AND status != 'cancelled'";
                         $objSQLDelDupSch = new SQL($qrDelDupSch);
                         $ResultDelDupSch = $objSQLDelDupSch->getDelete();
                         display_codeblock($qrDelDupSch);
@@ -331,7 +335,8 @@ if (isset($_GET['nopos'])) {
 function get_schedulingDetailsBySID($period, $sid) {
     $schtab = "production_scheduling_$period";
     echo "====Fetch scheduling on $schtab, SID = $sid====<br>";
-    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid";
+//    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid";
+    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid AND status != 'cancelled'";
     $objSQLsch = new SQL($qrsch);
     $resultsch = $objSQLsch->getResultOneRowArray();
     if (!empty($resultsch)) {
@@ -375,7 +380,8 @@ function deleteWrongSchedulingOutputRecords($period, $qno, $cid, $bid, $runno, $
                     . "WHERE sid = $sch_sid AND quono = '$sch_qno' "
                     . "AND runningno = $sch_rno "
                     . "AND noposition = '$sch_npos' "
-                    . "AND cid = $sch_cid ";
+                    . "AND cid = $sch_cid "
+                    . "AND status != 'cancelled'";
             $objSQLDelSch = new SQL($qrDelSch);
             $delResultSch = $objSQLDelSch->getDelete();
             if ($delResultSch == 'deleted') {
@@ -455,7 +461,8 @@ function getStrayOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
         echo "Found record in $pottab with sid = $sid<br>";
         echo "Check Scheduling in $period if it matches or not<br>";
         $schtab = "production_scheduling_$period";
-        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid";
+//        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid";
+        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid AND status != 'cancelled'";
         $objSQLschchk = new SQL($qrschchk);
         $schchk1dataset = $objSQLschchk->getResultRowArray();
         display_codeblock($qrschchk);
@@ -465,7 +472,8 @@ function getStrayOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
         } else {
             echo "Found record !<br>";
             printtable($schchk1dataset, 'yes');
-            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid";
+//            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid";
+            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid AND status != 'cancelled'";
             $objSQLschchk2 = new SQL($qrschchk2);
             $schchk2numrow = $objSQLschchk2->getRowCount();
             display_codeblock($qrschchk2);
@@ -515,7 +523,8 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
     $schtab = "production_scheduling_$period";
     echo "===Checking $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
 //    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
-    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
     $obJSQLschcount = new SQL($qrschcount);
     $schnumrow = $obJSQLschcount->getRowCount();
     display_codeblock($qrschcount);
@@ -527,7 +536,8 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
     } else {
         echo "Found record!<br>";
 //        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
-        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+//        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
         $obJSQLsch = new SQL($qrsch);
         $schdatarow = $obJSQLsch->getResultOneRowArray();
         printtable($schdatarow, "no");

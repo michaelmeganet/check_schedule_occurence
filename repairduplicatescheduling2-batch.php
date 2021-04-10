@@ -6,7 +6,7 @@ include_once 'class/phhdate.inc.php';
 
 if (isset($_SESSION['duplicateSchList'])) {
     $duplicateSchList = $_SESSION['duplicateSchList'];
-    unset($_SESSION['duplicateSchList']);
+//    unset($_SESSION['duplicateSchList']);
 } else {
     die('Session file not detected.');
 }
@@ -29,8 +29,9 @@ if (isset($_GET['period'])) {
             echo "Begin processing $totaldata datas.<br>";
             $repairSuccessCnt = 0;
             $repairFailCnt = 0;
-            $repairFailArray = 0;
+            $repairFailArray = array();
             foreach ($duplicateSchList as $duplicateSchDataRow) {
+                echo "<div class='border border-primary bg-dark'>";
                 $sid = $duplicateSchDataRow['sid'];
                 $qno = $duplicateSchDataRow['qno'];
                 $cid = $duplicateSchDataRow['cid'];
@@ -54,9 +55,11 @@ if (isset($_GET['period'])) {
                         'msg' => $repairMsg,
                         'step' => $repairStep,
                     );
-                    echo $repairMsg;
+                    echo "<h4 class='bg-danger'>$repairMsg</h4>";
                 }
+
                 echo "=============================== <br>";
+                echo "</div>";
             }
             ?>
             <br>
@@ -84,7 +87,7 @@ if (isset($_GET['period'])) {
                 $bid2 = $duplicateSchDataRow2['bid'];
                 $runno2 = $duplicateSchDataRow2['rno'];
                 $nopos2 = $duplicateSchDataRow2['npos'];
-                $checkJCSID2 = checkJCSID($jobcode2);
+                $checkJCSID2 = checkJCSID($jobcode2, "nodisplay");
                 if ($checkJCSID2 == 'empty') {
                     $jcSIDList[] = array(
                         'jobcode' => $jobcode2,
@@ -93,7 +96,7 @@ if (isset($_GET['period'])) {
                 } else {
                     $jcsid2_period = $checkJCSID2['period'];
                     $jcsid2_sid = $checkJCSID2['sid'];
-                    $jcsidSchDtl = get_schedulingDetailsBySID($jcsid2_period, $jcsid2_sid);
+                    $jcsidSchDtl = get_schedulingDetailsBySID($jcsid2_period, $jcsid2_sid,'no display');
                     if ($jcsidSchDtl == 'empty') {
                         $jcSIDList[] = array(
                             'jobcode' => $jobcode2,
@@ -110,7 +113,7 @@ if (isset($_GET['period'])) {
                     }
                 }
             }
-            printtable($jcSIDList,"yes");
+            printtable($jcSIDList, "yes");
             ?>
         </div>
     </body>
@@ -121,17 +124,17 @@ if (isset($_GET['period'])) {
 function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos) {
     try {
         echo "<b> STEP 1 - Make sure the scheduling is correct</b><br>";
-//    echo "SID = $sid<br>";
-//    echo "Period = $period<br>";
-//    echo "Runningno = $runno<br>";
-//    echo "noposition = $nopos<br>";
-//    echo "cid = $cid<br>";
-//    echo "bid = $bid<br>";
+        echo "SID = $sid<br>";
+        echo "Period = $period<br>";
+        echo "Runningno = $runno<br>";
+        echo "noposition = $nopos<br>";
+        echo "cid = $cid<br>";
+        echo "bid = $bid<br>";
         echo "<div class='border border-warning'>";
         $schdatarow = get_schedulingDetailsBySID($period, $sid);
         if ($schdatarow['quono'] == $qno && $schdatarow['runningno'] == $runno && $schdatarow['noposition'] == $nopos && $schdatarow['cid'] == $cid && $schdatarow['bid'] == $bid) {
             echo "Scheduling fetch is correct! can continue to Step 2<br>";
-//            echo "Creating Jobcode .....<br>";
+            echo "Creating Jobcode .....<br>";
             $sch_quono = $schdatarow['quono'];
             $sch_jlfor = $schdatarow['jlfor'];
             $sch_rno = sprintf("%04d", $schdatarow['runningno']);
@@ -139,11 +142,12 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
             $sch_cocode = substr($sch_quono, 0, 3);
             $sch_quoissdt = substr($sch_quono, 4, 4);
             $sch_jobcode = "$sch_jlfor $sch_cocode $sch_quoissdt $sch_rno $sch_npos";
-//            echo "JOBCODE = $sch_jobcode<br>";
+            echo "JOBCODE = $sch_jobcode<br>";
             $step2 = true;
         } else {
-//            echo "Scheduling fetch is not correct! Cannot continue!<br>";
+            echo "Scheduling fetch is not correct! Cannot continue!<br>";
             $step2 = false;
+            echo "</div>";
             Throw new Exception('Scheduling fetch is not correct! Cannot continue', 1);
         }
         echo "</div>";
@@ -157,19 +161,20 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
             $predictedPeriod = sprintf("%02d", $di_ye) . sprintf("%02d", $di_mo);
             $periodSet = get_beforeafterperiod($period);
             $nextPeriod = $periodSet['nextPeriod'];
-//            echo "predicted period to place at : $predictedPeriod<br>";
+            echo "predicted period to place at : $predictedPeriod<br>";
             echo "Checking data in jobcodesid.<br>";
             echo "<div class='border border-warning'>";
             $chkJCSID = checkJCSID($sch_jobcode);
             if ($chkJCSID == 'empty') {
                 echo "Jobcodesid cannot be found.<br>";
-//                echo "Try comparing to nextperiod<br>";
+                echo "Try comparing to nextperiod<br>";
                 $nextschDetail = check_schRecordByPeriod($nextPeriod, $qno, $cid, $bid, $runno, $nopos);
                 if ($nextschDetail == 'empty') {
-//                    echo "There's no scheduling record found in $nextPeriod<br>";
-//                    echo "Is this really duplicate? Cannot continue!<br>";
+                    echo "There's no scheduling record found in $nextPeriod<br>";
+                    echo "Is this really duplicate? Cannot continue!<br>";
                     $step2b = FALSE;
                     $step3 = FALSE;
+                    echo "</div>";
                     Throw new Exception("There's no scheduling record found in $nextPeriod<br>
                     Is this really duplicate? Cannot continue!<br>", 2);
                 } else {
@@ -185,8 +190,8 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
                         $step2b = FALSE;
                         $step3 = TRUE;
                     } else {
-//                        echo "Date issue in scheduling $period and $nextPeriod is not the same.<br>";
-//                        echo "Must use different method for detection, go to Step 2.b first<br>";
+                        echo "Date issue in scheduling $period and $nextPeriod is not the same.<br>";
+                        echo "Must use different method for detection, go to Step 2.b first<br>";
                         $step2b = TRUE;
                         $step3 = TRUE;
 //                    Throw new Exception("There's no scheduling record found in $nextPeriod<br>
@@ -202,14 +207,15 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
                     $step2b = FALSE;
                     $step3 = TRUE;
                 } else {
-//                    echo "Period recorded in jobcodesid is not the same as prediction.<br>";
-//                    echo "Try comparing to nextperiod<br>";
+                    echo "Period recorded in jobcodesid is not the same as prediction.<br>";
+                    echo "Try comparing to nextperiod<br>";
                     $nextschDetail = check_schRecordByPeriod($nextPeriod, $qno, $cid, $bid, $runno, $nopos);
                     if ($nextschDetail == 'empty') {
-//                        echo "There's no scheduling record found in $nextPeriod<br>";
-//                        echo "Is this really duplicate? Cannot continue!<br>";
+                        echo "There's no scheduling record found in $nextPeriod<br>";
+                        echo "Is this really duplicate? Cannot continue!<br>";
                         $step2b = FALSE;
                         $step3 = FALSE;
+                        echo "</div>";
                         Throw new Exception("There's no scheduling record found in $nextPeriod<br>
                     Is this really duplicate? Cannot continue!<br>", 2);
                     } else {
@@ -225,8 +231,8 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
                             $step2b = FALSE;
                             $step3 = TRUE;
                         } else {
-//                            echo "Date issue in scheduling $period and $nextPeriod is not the same.<br>";
-//                            echo "Must use different method for detection, go to Step 2.b first<br>";
+                            echo "Date issue in scheduling $period and $nextPeriod is not the same.<br>";
+                            echo "Must use different method for detection, go to Step 2.b first<br>";
                             $step2b = TRUE;
                             $step3 = TRUE;
                         }
@@ -254,6 +260,10 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
                 $sourcePeriod = $nextPeriod;
             } elseif ($targetPeriod == $nextPeriod) {
                 $sourcePeriod = $period;
+            } else {
+                echo "<b>Correct Period = $targetPeriod</b><br>";
+                echo "<b>Predicted Duplicate Period = $nextPeriod</b><br>";
+                Throw new Exception("Generated Correct Period ($correctPeriod) doesn't match the current check period [period = $period || nextPeriod = $nextPeriod]", 3);
             }
             echo "CORRECT PERIOD = $targetPeriod<br>";
             echo "DUPLICATE PERIOD = $sourcePeriod<br>";
@@ -262,71 +272,80 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
             $sourceSchTab = "production_scheduling_$sourcePeriod";
             $targetOutTab = "production_output_$targetPeriod";
             $sourceOutTab = "production_output_$sourcePeriod";
-//            echo "<div class='border border-warning'>";
-//            echo "Check output data from $targetSchTab <br>";
+            echo "<div class='border border-warning'>";
+            echo "Check output data from $targetSchTab <br>";
             $targetSchDetail = check_schRecordByPeriod($targetPeriod, $qno, $cid, $bid, $runno, $nopos);
             if ($targetSchDetail != 'empty') {
                 $targetSchDataRow = $targetSchDetail['data'];
                 $target_sid = $targetSchDataRow['sid'];
                 $correct_sid = $target_sid;
+            } else {
+                echo "</div>";
+                Throw new Exception("Cannot find data from $targetSchTab<br>
+                    Process cannot be continued!<br>", 3);
             }
             $sourceSchDetail = check_schRecordByPeriod($sourcePeriod, $qno, $cid, $bid, $runno, $nopos);
             if ($sourceSchDetail != 'empty') {
                 $sourceSchDataRow = $sourceSchDetail['data'];
                 $source_sid = $sourceSchDataRow['sid'];
+            } else {
+                echo "</div>";
+                Throw new Exception("Cannot find data from $sourceSchTab<br>
+                    Process cannot be continued!<br>", 3);
             }
             if ($targetSchDetail == 'empty') {
-//                echo "Cannot find data from $targetSchTab<br>";
-//                echo "Process cannot be continued!<br>";
+                echo "Cannot find data from $targetSchTab<br>";
+                echo "Process cannot be continued!<br>";
                 $step4 = FALSE;
+                echo "</div>";
                 Throw new Exception("Cannot find data from $targetSchTab<br>
                     Process cannot be continued!<br>", 3);
             } else {
-//                echo "<div class='border border-danger'>";
+                echo "<div class='border border-danger'>";
                 $target_outDetail = check_outputRecordbySID($targetPeriod, $target_sid);
                 if ($target_outDetail == 'empty') {
-//                    echo "<div class='border border-light'>";
-//                    echo "Output is empty, begin check if stray input to $sourceOutTab or not<br>";
+                    echo "<div class='border border-light'>";
+                    echo "Output is empty, begin check if stray input to $sourceOutTab or not<br>";
                     $stray_outputdataset = getStrayOutputRecord($sourcePeriod, $target_sid, $qno, $runno, $nopos, $cid);
                     if ($stray_outputdataset != 'empty') {
-//                        echo "Found stray input, fix this and move it into $targetOutTab.<br>";
+                        echo "Found stray input, fix this and move it into $targetOutTab.<br>";
                         MoveStrayOutputRecord($stray_outputdataset, $sourcePeriod, $targetPeriod);
                     } else {
-//                        echo "Cannot find any stray input.<br>";
-//                        echo "<div class='border border-info'>";
-//                        echo "Begin check from $sourceSchTab to see if there's output record or not<br>";
+                        echo "Cannot find any stray input.<br>";
+                        echo "<div class='border border-info'>";
+                        echo "Begin check from $sourceSchTab to see if there's output record or not<br>";
                         if ($sourceSchDetail != 'empty') {
-//                            echo "Found data in $sourceSchTab<br>";
-//                            echo "Source SID = $source_sid<br>";
+                            echo "Found data in $sourceSchTab<br>";
+                            echo "Source SID = $source_sid<br>";
                             $source_outDetail = check_outputRecordbySID($sourcePeriod, $source_sid);
                             if ($source_outDetail == 'empty') {
-//                                echo "There's no record in $sourceOutTab.<br>";
-//                                echo "There's no record in $sourceOutTab and $targetOutTab<br>";
-//                                echo "Joblist might not yet be scanned. No need for Output<br>";
-//                                echo "Moving on.<br>";
+                                echo "There's no record in $sourceOutTab.<br>";
+                                echo "There's no record in $sourceOutTab and $targetOutTab<br>";
+                                echo "Joblist might not yet be scanned. No need for Output<br>";
+                                echo "Moving on.<br>";
                             } else {
-//                                echo "Found record in $sourceOutTab<br>";
-//                                echo "Converting SID from $source_sid to $target_sid to point to $targetSchTab<br>";
+                                echo "Found record in $sourceOutTab<br>";
+                                echo "Converting SID from $source_sid to $target_sid to point to $targetSchTab<br>";
                                 $source_outdataset = $source_outDetail['data'];
                                 foreach ($source_outdataset as $source_outkey => $source_outdatarow) {
                                     $source_outdataset[$source_outkey]['sid'] = $target_sid;
                                 }
-//                                echo "Table Converted :";
-//                                printtable($source_outdataset . "yes");
-//                                echo "Move output record int $targetOutTab<br>";
+                                echo "Table Converted :";
+                                printtable($source_outdataset, "yes");
+                                echo "Move output record int $targetOutTab<br>";
                             }
                         }
-//                        echo"</div>"; //check output duplicate transfer
+                        echo"</div>"; //check output duplicate transfer
                     }
-//                    echo "</div>"; //check stray output records
+                    echo "</div>"; //check stray output records
                 } else {
-//                    echo "Output exists.<br>";
+                    echo "Output exists.<br>";
                 }
-//                echo "</div>"; //end check output
-//                echo "==Finished checking output data==<br>";
-//                echo "==Begin deleting duplicate records == <br>";
-//                echo "DUPLICATE PERIOD  = $sourcePeriod<br>";
-//                echo "<div class='bg-danger'>";
+                echo "</div>"; //end check output
+                echo "==Finished checking output data==<br>";
+                echo "==Begin deleting duplicate records == <br>";
+                echo "DUPLICATE PERIOD  = $sourcePeriod<br>";
+                echo "<div class='bg-danger'>";
                 echo "<div class='border border-light'>";
                 echo "Deleting duplicate output records...<br>";
                 $qrDelDupOut = "DELETE FROM $sourceOutTab WHERE sid = $source_sid";
@@ -337,16 +356,20 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
                 echo "</div>";
                 echo "<div class='border border-light'>";
                 echo "Deleting duplicate Scheduling records...<br>";
-                $qrDelDupSch = "DELETE FROM $sourceSchTab WHERE sid = $source_sid AND quono = '$qno' AND runningno = $runno AND cid = $cid AND noposition = $nopos AND bid = $bid";
+                $qrDelDupSch = "DELETE FROM $sourceSchTab "
+                        . "WHERE sid = $source_sid AND quono = '$qno' "
+                        . "AND runningno = $runno AND cid = $cid "
+                        . "AND noposition = $nopos AND bid = $bid "
+                        . "AND status != 'cancelled'";
                 $objSQLDelDupSch = new SQL($qrDelDupSch);
                 $ResultDelDupSch = $objSQLDelDupSch->getDelete();
                 display_codeblock($qrDelDupSch);
                 echo "Delete Scheduling Result : $ResultDelDupSch<br>";
                 echo "</div>";
-//                echo "</div>";
+                echo "</div>";
                 $step4 = TRUE;
             }
-//            echo "</div>"; //
+            echo "</div>"; //
             echo "</div><br>";
         }
 
@@ -357,7 +380,7 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
             if ($chkJCSID == 'empty') {
                 echo "There was no record in Jobcodesid for, no need to do check<br>";
             } else {
-//                printtable($chkJCSID);
+                printtable($chkJCSID);
                 $finjcsid_sid = $chkJCSID['sid'];
                 $finjcsid_period = $chkJCSID['period'];
                 if ($correct_sid == $finjcsid_sid) {
@@ -402,39 +425,64 @@ function repairDuplicateRecords($period, $sid, $qno, $cid, $bid, $runno, $nopos)
     return $repairResult;
 }
 
-function get_schedulingDetailsBySID($period, $sid) {
+function get_schedulingDetailsBySID($period, $sid, $display = 'display') {
     $schtab = "production_scheduling_$period";
-//    echo "====Fetch scheduling on $schtab, SID = $sid====<br>";
-    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid";
-    $objSQLsch = new SQL($qrsch);
-    $resultsch = $objSQLsch->getResultOneRowArray();
-    if (!empty($resultsch)) {
-//        printtable($resultsch, 'no');
-//        echo "====End fetch scheduling on $schtab, SID = $sid====<br>";
-        return $resultsch;
+    if ($display == 'display') {
+        echo "====Fetch scheduling on $schtab, SID = $sid====<br>";
+//    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid";
+        $qrsch = "SELECT * FROM $schtab WHERE sid = $sid AND status != 'cancelled'";
+        $objSQLsch = new SQL($qrsch);
+        $resultsch = $objSQLsch->getResultOneRowArray();
+        if (!empty($resultsch)) {
+            printtable($resultsch, 'no');
+            echo "====End fetch scheduling on $schtab, SID = $sid====<br>";
+            return $resultsch;
+        } else {
+            echo "Cannot find scheduling records....<br>";
+            echo "====End fetch scheduling on $schtab, SID = $sid====<br>";
+            return 'empty';
+        }
     } else {
-//        echo "Cannot find scheduling records....<br>";
-//        echo "====End fetch scheduling on $schtab, SID = $sid====<br>";
-        return 'empty';
+//    $qrsch = "SELECT * FROM $schtab WHERE sid = $sid";
+        $qrsch = "SELECT * FROM $schtab WHERE sid = $sid AND status != 'cancelled'";
+        $objSQLsch = new SQL($qrsch);
+        $resultsch = $objSQLsch->getResultOneRowArray();
+        if (!empty($resultsch)) {
+            return $resultsch;
+        } else {
+            return 'empty';
+        }
+        
     }
 }
 
-function checkJCSID($jobcode) {
-//    echo "=== BEGIN CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
+function checkJCSID($jobcode, $display = 'display') {
+    if ($display == 'display') {
+        echo "=== BEGIN CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
 //    $tab = 'jobcodesid';
-    $qr = "SELECT * FROM jobcodesid WHERE jobcode = '$jobcode' ORDER BY jcodeid DESC";
-    $objSQL = new SQL($qr);
-    $result = $objSQL->getResultOneRowArray();
-    if (!empty($result)) {
-//        echo "Found jobcodesid record<br>";
-//        printtable($result, 'no');
-//        echo "=== END CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
-        return $result;
+        $qr = "SELECT * FROM jobcodesid WHERE jobcode = '$jobcode' ORDER BY jcodeid DESC";
+        $objSQL = new SQL($qr);
+        $result = $objSQL->getResultOneRowArray();
+        if (!empty($result)) {
+            echo "Found jobcodesid record<br>";
+            printtable($result, 'no');
+            echo "=== END CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
+            return $result;
+        } else {
+            echo "There's no jobcodesid record for $jobcode<br>";
+            echo "This jobcode hasn't been scanned yet<br>";
+            echo "=== END CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
+            return 'empty';
+        }
     } else {
-//        echo "There's no jobcodesid record for $jobcode<br>";
-//        echo "This jobcode hasn't been scanned yet<br>";
-//        echo "=== END CHECKING JOBCODESID for JOBCODE  = $jobcode=== <br>";
-        return 'empty';
+        $qr = "SELECT * FROM jobcodesid WHERE jobcode = '$jobcode' ORDER BY jcodeid DESC";
+        $objSQL = new SQL($qr);
+        $result = $objSQL->getResultOneRowArray();
+        if (!empty($result)) {
+            return $result;
+        } else {
+            return 'empty';
+        }
     }
 }
 
@@ -461,7 +509,7 @@ function MoveStrayOutputRecord($outputdataset, $sourceperiod, $targetperiod) {
         $qrInsAll .= $qrIns;
         $qrInsDebug .= "$qrIns<br>";
     }
-//    display_codeblock($qrInsDebug);
+    display_codeblock($qrInsDebug);
     $objSQLIns = new SQL($qrInsAll);
     $insResult = $objSQLIns->InsertData();
     echo "Result = $insResult<br>";
@@ -477,40 +525,44 @@ function MoveStrayOutputRecord($outputdataset, $sourceperiod, $targetperiod) {
 }
 
 function getStrayOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
+    $rno = intval($rno);
+    $npos = intval($npos);
     $pottab = "production_output_$period";
-//    echo "Try checking for output data in $pottab<br>";
+    echo "Try checking for output data in $pottab<br>";
     $qrpot = "SELECT * FROM $pottab WHERE sid = $sid";
     $objSQLpot = new SQL($qrpot);
     $potdataset = $objSQLpot->getResultRowArray();
-//    display_codeblock($qrpot);
+    display_codeblock($qrpot);
     if (!empty($potdataset)) {
-//        echo "Found record in $pottab with sid = $sid<br>";
-//        echo "Check Scheduling in $period if it matches or not<br>";
+        echo "Found record in $pottab with sid = $sid<br>";
+        echo "Check Scheduling in $period if it matches or not<br>";
         $schtab = "production_scheduling_$period";
-        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid";
+//        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid";
+        $qrschchk = "SELECT * FROM $schtab WHERE sid = $sid AND status != 'cancelled'";
         $objSQLschchk = new SQL($qrschchk);
         $schchk1dataset = $objSQLschchk->getResultRowArray();
-//        display_codeblock($qrschchk);
+        display_codeblock($qrschchk);
         if (empty($schchk1dataset)) {
-//            echo "No Scheduling is found, Output records are stray<br>";
+            echo "No Scheduling is found, Output records are stray<br>";
             $retoutput = true;
         } else {
-//            echo "Found record !<br>";
-//            printtable($schchk1dataset, 'yes');
-            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid";
+            echo "Found record !<br>";
+            printtable($schchk1dataset, 'yes');
+//            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid";
+            $qrschchk2 = "SELECT COUNT(*) FROM $schtab WHERE sid = $sid AND quono = '$qno' AND runningno = $rno AND noposition = $npos AND cid = $cid AND status != 'cancelled'";
             $objSQLschchk2 = new SQL($qrschchk2);
             $schchk2numrow = $objSQLschchk2->getRowCount();
-//            display_codeblock($qrschchk2);
+            display_codeblock($qrschchk2);
             if ($schchk2numrow == 0) {
-//                echo "This is a different scheduling record, output belong here<br>";
+                echo "This is a different scheduling record, output belong here<br>";
                 $retoutput = false;
             } else {
-//                echo "This is the exact same record.<br>";
+                echo "This is the exact same record.<br>";
                 $retoutput = true;
             }
         }
     } else {
-//        echo "Not found any record in $pottab.<br>";
+        echo "Not found any record in $pottab.<br>";
         $retoutput = false;
     }
     if ($retoutput) {
@@ -522,54 +574,80 @@ function getStrayOutputRecord($period, $sid, $qno, $rno, $npos, $cid) {
 
 function check_outputRecordbySID($period, $sid) {
     $pottab = "production_output_$period";
-//    echo "===Checking $pottab for SID = $sid===<br>";
+    echo "===Checking $pottab for SID = $sid===<br>";
     $qrpotcount = "SELECT COUNT(*) FROM $pottab WHERE sid = $sid AND jobtype != 'jobtake'";
     $objSQLpotcount = new SQL($qrpotcount);
     $potnumrow = $objSQLpotcount->getRowCount();
-//    display_codeblock($qrpotcount);
-//    echo "Found $potnumrow Records<br>";
+    display_codeblock($qrpotcount);
+    echo "Found $potnumrow Records<br>";
     if ($potnumrow <= 0) {
-//        echo "Cannot find any record <br>";
-//        echo "===End Checking $pottab for SID = $sid ===<br>";
+        echo "Cannot find any record <br>";
+        echo "===End Checking $pottab for SID = $sid ===<br>";
         return 'empty';
     } else {
-//        echo "Found Record! <br>";
+        echo "Found Record! <br>";
         $qrpot = "SELECT * FROM $pottab WHERE sid = $sid AND jobtype != 'jobtake'";
         $objSQLpot = new SQL($qrpot);
         $potdatarow = $objSQLpot->getResultRowArray();
-//        printtable($potdatarow, 'yes');
-//        echo "===End Checking $pottab for SID = $sid ===<br>";
+        printtable($potdatarow, 'yes');
+        echo "===End Checking $pottab for SID = $sid ===<br>";
         return array('count' => $potnumrow, 'data' => $potdatarow);
     }
 }
 
-function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
+function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos, $display = 'display') {
+    $runno = intval($runno);
+    $nopos = intval($nopos);
     $schtab = "production_scheduling_$period";
-//    echo "===Checking $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
+    if ($display == 'display') {
+        echo "===Checking $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
 //    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
-    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
-    $obJSQLschcount = new SQL($qrschcount);
-    $schnumrow = $obJSQLschcount->getRowCount();
-    display_codeblock($qrschcount);
-//    echo "Found $schnumrow scheduling records<br>";
-    if ($schnumrow <= 0) {
-//        echo "Cannot find any record<br>";
-//        echo "===End $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
-        return 'empty';
-    } else {
-//        echo "Found record!<br>";
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+        $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+        $obJSQLschcount = new SQL($qrschcount);
+        $schnumrow = $obJSQLschcount->getRowCount();
+        display_codeblock($qrschcount);
+        echo "Found $schnumrow scheduling records<br>";
+        if ($schnumrow <= 0) {
+            echo "Cannot find any record<br>";
+            echo "===End $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
+            return 'empty';
+        } else {
+            echo "Found record!<br>";
 //        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
-        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
-        $obJSQLsch = new SQL($qrsch);
-        $schdatarow = $obJSQLsch->getResultOneRowArray();
-//        printtable($schdatarow, "no");
-//        echo "===End $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
-        $out = array('count' => $schnumrow, 'data' => $schdatarow);
-        return $out;
+//        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+            $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+            $obJSQLsch = new SQL($qrsch);
+            $schdatarow = $obJSQLsch->getResultOneRowArray();
+            printtable($schdatarow, "no");
+            echo "===End $schtab for quono = $qno;cid = $cid;bid = $bid;runno = $runno;noposition = $nopos======<br>";
+            $out = array('count' => $schnumrow, 'data' => $schdatarow);
+            return $out;
 //        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid =$bid AND runningno = '$runno' AND noposition $nopos ";
 //        $objSQLsch = new SQL($qrsch);
 //        $sch_dataset = $objSQLsch->getResultOneRowArray();
 //        return $sch_dataset;
+        }
+    } else {
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+        $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+        $obJSQLschcount = new SQL($qrschcount);
+        $schnumrow = $obJSQLschcount->getRowCount();
+        if ($schnumrow <= 0) {
+            return 'empty';
+//        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+//        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+            $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+            $obJSQLsch = new SQL($qrsch);
+            $schdatarow = $obJSQLsch->getResultOneRowArray();
+            $out = array('count' => $schnumrow, 'data' => $schdatarow);
+            return $out;
+//        $qrsch = "SELECT * FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid =$bid AND runningno = '$runno' AND noposition $nopos ";
+//        $objSQLsch = new SQL($qrsch);
+//        $sch_dataset = $objSQLsch->getResultOneRowArray();
+//        return $sch_dataset;
+        }
     }
 }
 

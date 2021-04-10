@@ -31,7 +31,8 @@ if (isset($_POST['period'])) {
     $ordtab = "orderlist_{$com_sml}_$period";
     $schtab = "production_scheduling_$period";
 
-    $qrschcount = "SELECT COUNT(*) FROM $schtab ORDER BY sid ASC";
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab ORDER BY sid DESC";
+    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE status != 'cancelled' ORDER BY sid DESC";
     $objSQLschcount = new SQL($qrschcount);
     $schnumrow = $objSQLschcount->getRowCount();
     if ($schnumrow <= 0) {
@@ -54,7 +55,8 @@ if (isset($_POST['period'])) {
         }
         $duplicatecount = 0;
         $start = ($page - 1) * $limit;
-        $qrsch = "SELECT * FROM $schtab ORDER BY sid ASC LIMIT $start, $limit";
+//        $qrsch = "SELECT * FROM $schtab ORDER BY sid DESC LIMIT $start, $limit";
+        $qrsch = "SELECT * FROM $schtab WHERE status != 'cancelled' ORDER BY sid DESC LIMIT $start, $limit";
         $objSQLsch = new SQL($qrsch);
         $schdataset = $objSQLsch->getResultRowArray();
         $sch_detaillist = array();
@@ -63,8 +65,8 @@ if (isset($_POST['period'])) {
             $sch_quono = $schdatarow['quono'];
             $sch_com = $schdatarow['company'];
             $sch_jlfor = $schdatarow['jlfor'];
-            $sch_rno = sprintf("%04d", $schdatarow['runningno']);
-            $sch_npos = sprintf("%02d", $schdatarow['noposition']);
+            $sch_rno = $schdatarow['runningno'];
+            $sch_npos =  $schdatarow['noposition'];
             $sch_cid = $schdatarow['cid'];
             $sch_bid = $schdatarow['bid'];
             $sch_cocode = substr($sch_quono, 0, 3);
@@ -72,7 +74,7 @@ if (isset($_POST['period'])) {
             $sch_dateissue = $schdatarow['date_issue'];
             $sch_completiondate = $schdatarow['completion_date'];
             $sch_status = $schdatarow['status'];
-            $sch_jobcode = "$sch_jlfor $sch_cocode $sch_quoissdt $sch_rno $sch_npos";
+            $sch_jobcode = "$sch_jlfor $sch_cocode $sch_quoissdt " . sprintf("%04d", $sch_rno) . " " . sprintf("%02d", $sch_npos);
 //            echo "JOBCODE = $sch_jobcode<br><br>";
             $JCSIDdatarow = get_JCSIDRecord($sch_jobcode);
             if ($JCSIDdatarow == 'empty') {
@@ -160,11 +162,15 @@ function get_beforeafterperiod($period) {
 }
 
 function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
+    $runno = intval($runno);
+    $nopos = intval($nopos);
     $schtab = "production_scheduling_$period";
-//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
-    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
+    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos AND status != 'cancelled'";
+//    $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos";
     $obJSQLschcount = new SQL($qrschcount);
     $schnumrow = $obJSQLschcount->getRowCount();
+//    echo "qrschcount = $qrschcount; ";
+//    echo "result = $schnumrow<br>";
     if ($schnumrow <= 0) {
         return 'not exist';
     } else {
@@ -284,7 +290,7 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                         </tr>
                                         <tr>
                                             <td>&nbsp;</td>
-                                            <td class="text-right"><?php if ($duplicatecount != 0) { ?><a target="_blank" href="repairduplicatescheduling2-batch.php?period=<?php echo $period;?>" class="btn btn-info">Do Batch Fix Process</a><?php } ?></td>
+                                            <td class="text-right"><?php if ($duplicatecount != 0) { ?><a target="_blank" href="repairduplicatescheduling2-batch.php?period=<?php echo $period; ?>" class="btn btn-info">Do Batch Fix Process</a><?php } ?></td>
                                         </tr>
                                     </thead>
                                 </table>
