@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (isset($_SESSION['duplicateSchList'])) {
+    unset($_SESSION['duplicateSchList']);
+    echo "Cleaned session record<br>";
+}
 include_once 'class/dbh.inc.php';
 include_once 'class/variables.inc.php';
 include_once 'class/phhdate.inc.php';
@@ -47,6 +52,7 @@ if (isset($_POST['period'])) {
         if ($page > $totalpage) {
             $page = $totalpage;
         }
+        $duplicatecount = 0;
         $start = ($page - 1) * $limit;
         $qrsch = "SELECT * FROM $schtab ORDER BY sid ASC LIMIT $start, $limit";
         $objSQLsch = new SQL($qrsch);
@@ -71,6 +77,8 @@ if (isset($_POST['period'])) {
             $JCSIDdatarow = get_JCSIDRecord($sch_jobcode);
             if ($JCSIDdatarow == 'empty') {
                 $jcsid_exist = 'no';
+                $jcsid_sid = 'none';
+                $jcsid_period = 'none';
                 $jcsid_remark = $jcsid_exist;
             } else {
                 $jcsid_exist = 'yes';
@@ -82,12 +90,12 @@ if (isset($_POST['period'])) {
             $nextschPeriod = $periodSet['nextPeriod'];
             $nextsch_exist = check_schRecordByPeriod($nextschPeriod, $sch_quono, $sch_cid, $sch_bid, $sch_rno, $sch_npos);
             if ($nextsch_exist == 'exist') {
+                $duplicatecount++;
                 $nextsch_remark = "Duplicate Record in $period and $nextschPeriod";
             } else {
                 $nextsch_remark = "Not Duplicate";
             }
-
-            $sch_detaillist[] = array(
+            $detailList = array(
                 'jobcode' => $sch_jobcode,
                 'sid' => $sch_sid,
                 'qno' => $sch_quono,
@@ -107,6 +115,11 @@ if (isset($_POST['period'])) {
                 'nextsch_remark' => $nextsch_remark,
                 'status' => $sch_status
             );
+            $sch_detaillist[] = $detailList;
+
+            if ($nextsch_exist == 'exist') {
+                $_SESSION['duplicateSchList'][] = $detailList;
+            }
         }
     }
 }
@@ -170,7 +183,7 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
 
     <body>
 
-        <?php #include"navmenu.php";        ?>
+        <?php #include"navmenu.php";          ?>
 
         <div class="container-fluid">
 
@@ -263,6 +276,16 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                             <td class="bg-warning">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
                                             <td>Jobcodesid Period Not Match</td>
                                         </tr>
+                                        <tr>
+                                            <td>&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2">Found <?php echo $duplicatecount; ?> duplicate records in the current dataset.</td>
+                                        </tr>
+                                        <tr>
+                                            <td>&nbsp;</td>
+                                            <td class="text-right"><?php if ($duplicatecount != 0) { ?><a target="_blank" href="repairduplicatescheduling2-batch.php?period=<?php echo $period;?>" class="btn btn-info">Do Batch Fix Process</a><?php } ?></td>
+                                        </tr>
                                     </thead>
                                 </table>
                                 <table class='table table-striped table-bordered table-responsive'>
@@ -289,7 +312,7 @@ function check_schRecordByPeriod($period, $qno, $cid, $bid, $runno, $nopos) {
                                                 echo "<tr class='bg-danger'>";
                                             } elseif ($sch_detailrow['nextsch_exist'] == 'exist') {
                                                 echo "<tr class='bg-info'>";
-                                            } elseif ($sch_detailrow['jcsid_period'] != $period) {
+                                            } elseif ($sch_detailrow['jcsid_period'] != $period && $sch_detailrow['jcsid_period'] != 'none') {
                                                 echo "<tr class='bg-warning'>";
                                             } else {
                                                 echo "<tr>";
