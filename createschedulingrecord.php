@@ -143,8 +143,10 @@ function createSchedulingData($schtab, $ord_dataset) {
 
     $objLegacySQLlog = new legacySQLBINDPARAM($qrins, $Insert_Array);
     $insLegacyResult = $objLegacySQLlog->InsertData2();
+    $legacyServerTarget = $objLegacySQLlog->get_servername_dbh();
     echo "===DEBUG LOG QR = $qrins_debug <br>";
-    echo "+++===LEGACY LOG RESULT (Target : 192.168.102.11) = $insLegacyResult<br>";
+    echo "+++===LEGACY LOG RESULT (Target : $legacyServerTarget) = $insLegacyResult<br>";
+    echo "note : Make sure the Target Server is correct!<br>";
 
     echo "<br>##########################################################################################<br>";
 

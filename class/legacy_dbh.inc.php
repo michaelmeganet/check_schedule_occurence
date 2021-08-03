@@ -2,7 +2,7 @@
 
 class legacyDbh {
 
-	private $servername;
+	protected $servername = '192.168.102.11';
 	private $username;
 	private $password;
 	private $dbname;
@@ -10,7 +10,7 @@ class legacyDbh {
 
 	public function connect() {
 //		$this->servername = "localhost";
-                $this->servername = "192.168.102.11";
+//                $this->servername = "192.168.102.11";
 //                $this->servername = "10.10.1.2";
 		$this->username = "root";
 		$this->password = "5105458";
@@ -27,6 +27,9 @@ class legacyDbh {
 			echo "Connection failed: ".$e->getMessage();
 		}
 	}
+        public function get_servername_dbh(){
+            return $this->servername;
+        }
 
 }
 
