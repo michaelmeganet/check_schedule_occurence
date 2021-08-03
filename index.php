@@ -86,6 +86,7 @@ if (isset($_POST['period'])) {
 
 function check_schRecord($schtab, $qno, $cid, $bid, $runno, $nopos) {
     $qrschcount = "SELECT COUNT(*) FROM $schtab WHERE quono = '$qno' AND cid = $cid AND bid = $bid AND runningno = '$runno' AND noposition = $nopos ";
+//    echo "qr = $qrschcount;<br>";
     $obJSQLschcount = new SQL($qrschcount);
     $schnumrow = $obJSQLschcount->getRowCount();
     if ($schnumrow <= 0) {
