@@ -218,7 +218,125 @@ Class SQL extends Dbh {
     }
 
 }
+Class SQL_legacy extends Dbh_legacy {
 
+    protected $sql;
+
+    public function __construct($sql) {
+
+        $this->sql = $sql;
+    }
+
+    public function getResultRowArray() {
+        $resultset = array();
+        $sql = $this->sql;
+        //echo "\$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+        $stmt->execute();
+        if ($stmt->rowCount()) {
+            $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $resultset = $row;
+            //echo "line 122 \$resultset from Line 118 \$smt->execute() of \$sql<br>";
+            //echo "the array of sql reuslt : <br>";
+            //  print_r($resultset);
+            //echo "=========================<br>";
+        } else {
+            // do nothing;
+            #echo "no result on getResultRowArray";
+            $resultset = array();
+        }
+
+        return $resultset;
+    }
+
+    public function getResultOneRowArray() {
+        $row = array();
+        $sql = $this->sql;
+        //echo "\$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+        $stmt->execute();
+        if ($stmt->rowCount()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        //echo "array \$row :<br>";
+        //print_r($row);
+        //echo "<br>";
+        return $row;
+    }
+
+    public function getRowCount() {
+
+        $sql = $this->sql;
+        //echo "function getRowCount(), \$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+        //echo "list down the content of \$stmt <br>";
+        //print_r($stmt);
+        #echo "<br>";
+        $stmt->execute();
+        $number_of_rows = $stmt->fetchColumn();
+        // echo "\$number_of_rows =  $number_of_rows <br>";
+        return $number_of_rows;
+    }
+
+    public function getUpdate() {
+
+        $sql = $this->sql;
+        //echo "Line 165 , in getUpdate function of Class SQL,  \$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+
+        if ($stmt->execute()) {
+            $result = 'updated';
+        } else {
+            $result = 'update fail';
+        }
+        return $result;
+    }
+
+    public function InsertData() {
+
+        $sql = $this->sql;
+        //echo "\$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+
+        if ($stmt->execute()) {
+            $result = 'insert ok!';
+        } else {
+            $result = 'insert fail';
+        }
+        #echo "\$result = $result <br>";
+        return $result;
+    }
+
+    public function ExecuteQuery() {
+
+        $sql = $this->sql;
+        //echo "\$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+
+        if ($stmt->execute()) {
+            $result = 'execute ok!';
+        } else {
+            $result = 'execute fail';
+        }
+        #echo "\$result = $result <br>";
+        return $result;
+    }
+
+    public function getDelete() {
+
+        $sql = $this->sql;
+        //echo "Line 192 , in getDelete function of Class SQL,  \$sql = $sql <br>";
+        $stmt = $this->connect()->prepare($sql);
+
+        if ($stmt->execute()) {
+            $result = 'deleted';
+        } else {
+            $result = 'delete fail';
+        }
+        return $result;
+    }
+
+}
 Class SQLBINDPARAM extends SQL {
 
     protected $sql;
@@ -318,7 +436,105 @@ Class SQLBINDPARAM extends SQL {
     }
 
 }
+Class SQLBINDPARAM_legacy extends SQL_legacy {
 
+    protected $sql;
+    protected $bindparamArray;
+
+    public function __construct($sql, $bindparamArray) {
+
+        parent::__construct($sql);
+        $this->bindparamArray = $bindparamArray;
+    }
+
+    public function InsertData2() {
+        //echo "in the function of InsertData2() of the Class SQLBINDPARAM <br>";
+        $sql = $this->sql;
+        //echo $sql . "<bR>";
+        $stmt = $this->connect()->prepare($sql);
+        $bindparamArray = $this->bindparamArray;
+//        unset($bindparamArray['submit']);
+//        print_r($bindparamArray);
+//        echo "<br>";
+//        $para = "";
+        $count = 0;
+        foreach ($bindparamArray as $key => $value) {
+            # code...
+            ${$key} = $value;
+            $bindValue = $key;
+            //$bindParamdata = "bindParam(:{$bindValue}, $$bindValue) == ".$$bindValue; //this is for debugging purposes
+            #echo "\$bindParamdata = $bindParamdata <br>";
+            #########################################################
+            # this line not successful, how to check in the future
+            //  $stmt->bindParam(":$key", $value);
+            ##########################################################
+            # this line is working,                                  #
+            # {$bindValue} = calls the $key value                    #
+            # $$bindValue = calls the value contained by $key array  #
+            ##########################################################
+            $count++;
+            $stmt->bindParam(":{$bindValue}", $$bindValue);
+//            echo "$count ".":{$key}".",".$value."<br>";
+//            $stmt->bindParam(":{$key}",$value);
+//            print_r($stmt);
+            //echo "<br>";
+        }
+
+//        echo "=====var_dump \$stmt==================<br>";
+//        var_dump($stmt);
+//        echo "=====end of var_dump \$stmt==================<br>";
+        if ($stmt->execute()) {
+            $result = 'insert ok!';
+        } else {
+            $result = 'insert fail';
+        }
+        return $result;
+    }
+
+    public function UpdateData2() {
+
+        $sql = $this->sql;
+        #echo $sql."<bR>";
+        $stmt = $this->connect()->prepare($sql);
+        $bindparamArray = $this->bindparamArray;
+//        unset($bindparamArray['submit']);
+//        print_r($bindparamArray);
+//        echo "<br>";
+//        $para = "";
+
+        foreach ($bindparamArray as $key => $value) {
+            # code...
+            ${$key} = $value;
+            $bindValue = $key;
+            $bindParamdata = "bindParam(:{$bindValue}, $$bindValue) == " . $$bindValue; //this is for debugging purposes
+            #debug_to_console($bindParamdata);
+            #echo "\$bindParamdata = $bindParamdata <br>";
+            #########################################################
+            # this line not successful, how to check in the future
+            //  $stmt->bindParam(":$key", $value);
+            ##########################################################
+//          # this line is working,                                  #
+            # {$bindValue} = calls the $key value                    #
+            # $$bindValue = calls the value contained by $key array  #
+            ##########################################################
+
+            $stmt->bindParam(":{$bindValue}", $$bindValue);
+        }
+
+//        echo "=====var_dump \$stmt==================<br>";
+//        var_dump($stmt);
+//        echo "=====end of var_dump \$stmt==================<br>";
+
+
+        if ($stmt->execute()) {
+            $result = 'Update ok!';
+        } else {
+            $result = 'Update fail';
+        }
+        return $result;
+    }
+
+}
 Class Screen extends SQL {
 
     protected $sql;
